@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.Soflutionltd/depsonar",
+  "name": "com.soflution/depsonar",
   "title": "Depsonar",
   "description": "Dependency audits, live CVE scans, migration detection and stack health across 9 languages.",
   "version": "0.0.0",
