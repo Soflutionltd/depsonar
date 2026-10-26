@@ -1,0 +1,51 @@
+{
+  "manifest_version": "0.3",
+  "name": "depsonar",
+  "display_name": "Depsonar",
+  "version": "0.0.0",
+  "description": "Dependency audits, live CVE scans, migration detection and stack health across 9 languages.",
+  "long_description": "Depsonar audits the dependencies of a project: outdated packages, live CVE scanning, migration detection and full stack health, with 23 tools across 9 languages.",
+  "author": {
+    "name": "Soflution Ltd",
+    "email": "contact@soflution.com",
+    "url": "https://github.com/Soflutionltd"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Soflutionltd/depsonar.git"
+  },
+  "homepage": "https://github.com/Soflutionltd/depsonar",
+  "support": "https://github.com/Soflutionltd/depsonar/issues",
+  "license": "MIT",
+  "keywords": [
+    "dependencies",
+    "security",
+    "cve",
+    "audit",
+    "npm",
+    "cargo",
+    "pip",
+    "migration"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
