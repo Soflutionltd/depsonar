@@ -1,6 +1,6 @@
 {
   "name": "depsonar",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "MCP server for dependency auditing, live CVE scanning, migration detection & full stack health. 23 tools, 9 languages.",
   "keywords": [
     "mcp",
@@ -30,24 +30,25 @@
   ],
   "author": "Soflution Ltd",
   "license": "MIT",
-  "homepage": "https://github.com/Soflution1/depsonar",
+  "homepage": "https://github.com/Soflutionltd/depsonar#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Soflution1/depsonar.git"
+    "url": "git+https://github.com/Soflutionltd/depsonar.git"
   },
   "bugs": {
-    "url": "https://github.com/Soflution1/depsonar/issues"
+    "url": "https://github.com/Soflutionltd/depsonar/issues"
   },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "depsonar": "dist/index.js",
+    "depsonar": "bin/supervise.cjs",
     "depsonar-dashboard": "dist/dashboard.js"
   },
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "bin"
   ],
   "scripts": {
     "build": "tsc",

@@ -29,11 +29,11 @@
   ],
   "server": {
     "type": "node",
-    "entry_point": "dist/index.js",
+    "entry_point": "bin/supervise.cjs",
     "mcp_config": {
       "command": "node",
       "args": [
-        "${__dirname}/dist/index.js"
+        "${__dirname}/bin/supervise.cjs"
       ],
       "env": {}
     }

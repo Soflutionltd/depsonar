@@ -1,0 +1,15 @@
+{
+  "package": "depsonar",
+  "server": "dist/index.js",
+  "passthrough": [
+    "--check",
+    "-c",
+    "--dashboard",
+    "-d",
+    "--daemon",
+    "--version",
+    "-v",
+    "--help",
+    "-h"
+  ]
+}

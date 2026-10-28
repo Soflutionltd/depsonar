@@ -107,7 +107,9 @@ Frameworks: SvelteKit, React, Next.js, Solid.js, Vue/Nuxt, Astro, Django, Larave
 
   registerTools(server);
 
-  const transport = new StdioServerTransport();
+  const { attachUpdateNotice, startUpdateCheck } = await import("./update-notice.js");
+  const transport = attachUpdateNotice(new StdioServerTransport());
+  startUpdateCheck("depsonar", SERVER_VERSION, "https://github.com/Soflutionltd/depsonar");
   await server.connect(transport);
   console.error(`${SERVER_NAME} v${SERVER_VERSION} running on stdio`);
 }
