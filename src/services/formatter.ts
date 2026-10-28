@@ -547,9 +547,13 @@ export function formatAudit(results: AuditResult[]): string {
     return "# Security Audit ✅\n\nNo known vulnerabilities found across all scanned projects.";
   }
 
+  const audited = results.length - withErrors.length;
   const lines = [
-    `# 🔒 Security Audit\n`,
-    `**${results.length}** projects scanned | **${totalVulns}** vulnerabilities found`,
+    withErrors.length > 0 ? `# ⚠️ Security Audit incomplete\n` : `# 🔒 Security Audit\n`,
+    `**${audited}/${results.length}** projects audited | **${totalVulns}** vulnerabilities found`,
+    withErrors.length > 0
+      ? ` | **${withErrors.length}** not audited: their vulnerabilities are unknown, not zero`
+      : "",
     totalCritical > 0 ? ` | **${totalCritical} CRITICAL**` : "",
     totalHigh > 0 ? ` | **${totalHigh} HIGH**` : "",
     "\n",
