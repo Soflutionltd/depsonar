@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 
+import { homedir } from "os";
+import { delimiter, join } from "path";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
+
+// MCP clients start servers with a bare PATH: without the per-user tool
+// folders, cargo-audit, govulncheck or pip-audit look missing.
+const userToolDirs = [join(homedir(), ".cargo", "bin"), join(homedir(), "go", "bin"), join(homedir(), ".local", "bin")];
+const pathEntries = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+process.env.PATH = [...pathEntries, ...userToolDirs.filter(dir => !pathEntries.includes(dir))].join(delimiter);
 
 const args = process.argv.slice(2);
 
