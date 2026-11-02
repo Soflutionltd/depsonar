@@ -26,6 +26,11 @@ export interface AuditResult {
   error: string | null;
 }
 
+export interface AuditOptions {
+  /** Node only: skip devDependencies (`npm audit --omit=dev`, `pnpm audit --prod`). Other languages audit everything. */
+  production?: boolean;
+}
+
 function cmd(command: string, cwd: string, timeout = 30_000): string | null {
   try {
     return execSync(command, {
@@ -51,16 +56,16 @@ function cmdExists(name: string): boolean {
 
 // ─── NPM / PNPM Audit ─────────────────────────────────────────────────
 
-function auditNode(projectPath: string, projectName: string): AuditResult {
+function auditNode(projectPath: string, projectName: string, options: AuditOptions): AuditResult {
   // Detect PM
   const pm = existsSync(join(projectPath, "pnpm-lock.yaml")) ? "pnpm"
     : existsSync(join(projectPath, "yarn.lock")) ? "yarn"
     : existsSync(join(projectPath, "bun.lockb")) || existsSync(join(projectPath, "bun.lock")) ? "bun"
     : "npm";
 
-  const auditCmd = pm === "pnpm" ? "pnpm audit --json"
+  const auditCmd = pm === "pnpm" ? `pnpm audit${options.production ? " --prod" : ""} --json`
     : pm === "yarn" ? "yarn audit --json"
-    : "npm audit --json";
+    : `npm audit${options.production ? " --omit=dev" : ""} --json`;
 
   if (pm === "yarn" || pm === "bun") {
     return emptyResult(projectName, "node", auditCmd, `Audit output of ${pm} is not supported yet: run it by hand.`);
@@ -311,9 +316,9 @@ function emptyResult(project: string, language: string, auditCommand: string, er
   };
 }
 
-export function auditProject(projectPath: string, projectName: string, language: string): AuditResult {
+export function auditProject(projectPath: string, projectName: string, language: string, options: AuditOptions = {}): AuditResult {
   switch (language) {
-    case "node": return auditNode(projectPath, projectName);
+    case "node": return auditNode(projectPath, projectName, options);
     case "rust": return auditRust(projectPath, projectName);
     case "python": return auditPython(projectPath, projectName);
     case "php": return auditPhp(projectPath, projectName);

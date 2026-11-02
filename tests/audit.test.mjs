@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { execSync } from "node:child_process";
 import { findProjectRoots, projectRootLabel } from "../dist/services/project.js";
-import { parseNodeAudit } from "../dist/services/audit.js";
+import { auditProject, parseNodeAudit } from "../dist/services/audit.js";
 
 function tree(files) {
   const root = mkdtempSync(join(tmpdir(), "depsonar-roots-"));
@@ -96,4 +97,23 @@ test("parseNodeAudit: failures are reported, never shown as clean", () => {
     /requires an existing lockfile/,
   );
   assert.match(parseNodeAudit(JSON.stringify({ something: "else" }), "x", "pnpm audit --json").error, /Unrecognized audit output/);
+});
+
+// Network: npm resolves the lockfile and queries the advisory database.
+test("auditProject production: devDependencies are left out", (t) => {
+  const root = tree({
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", dependencies: { minimist: "1.2.5" }, devDependencies: { lodash: "4.17.20" } }),
+  });
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  execSync("npm install --package-lock-only --ignore-scripts", { cwd: root, stdio: "ignore" });
+
+  const all = auditProject(root, "fixture", "node");
+  assert.equal(all.error, null);
+  assert.equal(all.auditCommand, "npm audit --json");
+  assert.deepEqual(all.vulnerabilities.map((v) => v.package).sort(), ["lodash", "minimist"]);
+
+  const production = auditProject(root, "fixture", "node", { production: true });
+  assert.equal(production.error, null);
+  assert.equal(production.auditCommand, "npm audit --omit=dev --json");
+  assert.deepEqual(production.vulnerabilities.map((v) => v.package), ["minimist"]);
 });

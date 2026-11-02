@@ -1,6 +1,6 @@
 {
   "name": "depsonar",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "MCP server for dependency auditing, live CVE scanning, migration detection & full stack health. 23 tools, 9 languages.",
   "keywords": [
     "mcp",
