@@ -37,6 +37,9 @@ import {
   getProjectsDir,
   getProjectInfo,
   discoverProjects,
+  findProjectRoots,
+  projectRootLabel,
+  ROOT_SCAN_MAX_DEPTH,
   getOutdated,
   isMajorUpdate,
   computeHealthReport,
@@ -78,7 +81,7 @@ import { scanWorkflows, scanAllProjectActions } from "../services/actions.js";
 import { scanDockerfiles, scanAllProjectDocker } from "../services/docker.js";
 import { checkProjectEnv, checkAllProjectEnvs } from "../services/envcheck.js";
 import { auditProject, auditAllProjects } from "../services/audit.js";
-import { checkProjectCves, checkAllProjectCves, getCveDatabaseStats, getCveDatabase } from "../services/cve.js";
+import { checkAllProjectCves, getCveDatabaseStats, getCveDatabase } from "../services/cve.js";
 import { checkDeprecated, checkAllDeprecated } from "../services/deprecated.js";
 import { scanProjectSecrets, scanAllProjectSecrets } from "../services/secrets.js";
 import { checkProjectLicenses, checkAllProjectLicenses } from "../services/licenses.js";
@@ -538,18 +541,14 @@ Examples:
     },
     async ({ project, directory }) => {
       try {
-        if (project) {
-          const projectPath = resolveProject(project);
-          const info = getProjectInfo(projectPath);
-          if (!info) return error(`Cannot read project at ${projectPath}`);
-          const result = auditProject(projectPath, info.name, info.language);
-          return text(formatAudit([result]));
+        const baseDir = project ? resolveProject(project) : directory || getProjectsDir();
+        const roots = findProjectRoots(baseDir, "lockfile");
+        if (roots.length === 0) {
+          return text(`No lockfile found in \`${baseDir}\` (searched ${ROOT_SCAN_MAX_DEPTH} levels deep).`);
         }
-
-        const projects = discoverProjects(directory);
-        if (projects.length === 0) return text("No projects found.");
-        const results = auditAllProjects(projects.map(p => ({ name: p.name, path: p.path, language: p.language })));
-        return text(formatAudit(results));
+        const results = roots.map(r => auditProject(r.path, projectRootLabel(baseDir, r), r.language));
+        // With a single project, show every root, clean ones included.
+        return text(formatAudit(project ? results : results.filter(r => r.totalVulnerabilities > 0 || r.error)));
       } catch (err) {
         return error(err instanceof Error ? err.message : String(err));
       }
@@ -850,17 +849,12 @@ Examples:
           return text(lines.join("\n"));
         }
 
-        if (project) {
-          const projectPath = resolveProject(project);
-          const info = getProjectInfo(projectPath);
-          if (!info) return error(`Cannot read project at ${projectPath}`);
-          const result = checkProjectCves(projectPath, info.name);
-          return text(formatCve(result.affected.length > 0 ? [result] : [], dbStats));
+        const baseDir = project ? resolveProject(project) : directory || getProjectsDir();
+        const roots = findProjectRoots(baseDir, "manifest");
+        if (roots.length === 0) {
+          return text(`No project found in \`${baseDir}\` (searched ${ROOT_SCAN_MAX_DEPTH} levels deep).`);
         }
-
-        const projects = discoverProjects(directory);
-        if (projects.length === 0) return text("No projects found.");
-        const results = checkAllProjectCves(projects.map(p => ({ name: p.name, path: p.path })));
+        const results = checkAllProjectCves(roots.map(r => ({ name: projectRootLabel(baseDir, r), path: r.path })));
         return text(formatCve(results, dbStats));
       } catch (err) {
         return error(err instanceof Error ? err.message : String(err));

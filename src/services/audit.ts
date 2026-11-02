@@ -55,57 +55,81 @@ function auditNode(projectPath: string, projectName: string): AuditResult {
   // Detect PM
   const pm = existsSync(join(projectPath, "pnpm-lock.yaml")) ? "pnpm"
     : existsSync(join(projectPath, "yarn.lock")) ? "yarn"
-    : existsSync(join(projectPath, "bun.lockb")) ? "bun"
+    : existsSync(join(projectPath, "bun.lockb")) || existsSync(join(projectPath, "bun.lock")) ? "bun"
     : "npm";
 
   const auditCmd = pm === "pnpm" ? "pnpm audit --json"
     : pm === "yarn" ? "yarn audit --json"
     : "npm audit --json";
 
-  const raw = cmd(auditCmd, projectPath, 60_000);
-  if (!raw) return emptyResult(projectName, "node", auditCmd, "Audit command failed or timed out.");
-
-  try {
-    // npm audit JSON format
-    if (pm === "npm" || pm === "pnpm") {
-      const data = JSON.parse(raw);
-      const vulns: VulnerabilityInfo[] = [];
-
-      // npm v7+ format: data.vulnerabilities = { [name]: { severity, via, fixAvailable, ... } }
-      if (data.vulnerabilities) {
-        for (const [pkg, info] of Object.entries(data.vulnerabilities) as any[]) {
-          const via = Array.isArray(info.via) ? info.via : [];
-          const advisory = via.find((v: any) => typeof v === "object" && v.title);
-          vulns.push({
-            package: pkg,
-            severity: info.severity || "moderate",
-            title: advisory?.title || `Vulnerability in ${pkg}`,
-            url: advisory?.url || "",
-            fixVersion: typeof info.fixAvailable === "object" ? info.fixAvailable?.version || null : info.fixAvailable ? "available" : null,
-            currentVersion: info.range || null,
-          });
-        }
-      }
-
-      const meta = data.metadata?.vulnerabilities || {};
-      return {
-        project: projectName,
-        language: "node",
-        vulnerabilities: vulns,
-        totalVulnerabilities: meta.total || vulns.length,
-        critical: meta.critical || vulns.filter(v => v.severity === "critical").length,
-        high: meta.high || vulns.filter(v => v.severity === "high").length,
-        moderate: meta.moderate || vulns.filter(v => v.severity === "moderate").length,
-        low: meta.low || vulns.filter(v => v.severity === "low").length,
-        auditCommand: auditCmd,
-        error: null,
-      };
-    }
-  } catch {
-    return emptyResult(projectName, "node", auditCmd, "Failed to parse audit output.");
+  if (pm === "yarn" || pm === "bun") {
+    return emptyResult(projectName, "node", auditCmd, `Audit output of ${pm} is not supported yet: run it by hand.`);
   }
 
-  return emptyResult(projectName, "node", auditCmd, null);
+  const raw = cmd(auditCmd, projectPath, 60_000);
+  if (!raw) return emptyResult(projectName, "node", auditCmd, "Audit command failed or timed out.");
+  return parseNodeAudit(raw, projectName, auditCmd);
+}
+
+/**
+ * Reads `npm audit --json` (v7+: `vulnerabilities`, one entry per package) and
+ * `pnpm audit --json` (`advisories`, one entry per advisory, no `total`).
+ * Counts come from `metadata.vulnerabilities`, as each tool reports them.
+ */
+export function parseNodeAudit(raw: string, projectName: string, auditCmd: string): AuditResult {
+  let data: any;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return emptyResult(projectName, "node", auditCmd, `Failed to parse audit output: ${raw.slice(0, 200)}`);
+  }
+
+  if (data.error) {
+    const message = typeof data.error === "object" ? data.error.summary || data.error.code : String(data.error);
+    return emptyResult(projectName, "node", auditCmd, `Audit failed: ${message}`);
+  }
+  const meta = data.metadata?.vulnerabilities;
+  if (!meta || (!data.vulnerabilities && !data.advisories)) {
+    return emptyResult(projectName, "node", auditCmd, "Unrecognized audit output (no vulnerabilities, advisories or metadata).");
+  }
+
+  const vulns: VulnerabilityInfo[] = [];
+  for (const [pkg, info] of Object.entries(data.vulnerabilities ?? {}) as any[]) {
+    const via = Array.isArray(info.via) ? info.via : [];
+    const advisory = via.find((v: any) => typeof v === "object" && v.title);
+    vulns.push({
+      package: pkg,
+      severity: info.severity || "moderate",
+      title: advisory?.title || `Vulnerability in ${pkg}`,
+      url: advisory?.url || "",
+      fixVersion: typeof info.fixAvailable === "object" ? info.fixAvailable?.version || null : info.fixAvailable ? "available" : null,
+      currentVersion: info.range || null,
+    });
+  }
+  for (const advisory of Object.values(data.advisories ?? {}) as any[]) {
+    vulns.push({
+      package: advisory.module_name,
+      severity: advisory.severity || "moderate",
+      title: advisory.title || `Vulnerability in ${advisory.module_name}`,
+      url: advisory.url || "",
+      fixVersion: advisory.patched_versions || null,
+      currentVersion: advisory.findings?.[0]?.version || null,
+    });
+  }
+
+  const count = (key: "critical" | "high" | "moderate" | "low" | "info"): number => Number(meta[key] ?? 0);
+  return {
+    project: projectName,
+    language: "node",
+    vulnerabilities: vulns,
+    totalVulnerabilities: Number(meta.total ?? count("critical") + count("high") + count("moderate") + count("low") + count("info")),
+    critical: count("critical"),
+    high: count("high"),
+    moderate: count("moderate"),
+    low: count("low"),
+    auditCommand: auditCmd,
+    error: null,
+  };
 }
 
 // ─── Cargo Audit (Rust) ────────────────────────────────────────────────

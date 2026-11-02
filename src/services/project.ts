@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync, statSync } from "fs";
-import { join, basename, resolve } from "path";
+import { join, basename, resolve, relative } from "path";
 import { homedir } from "os";
 import {
   COMMAND_TIMEOUT,
@@ -230,6 +230,53 @@ export function discoverProjects(rootDir?: string): ProjectInfo[] {
   } catch { /* ignore */ }
 
   return projects.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ─── Project Roots (monorepos, nested apps) ────────────────────────────
+
+/** Files an audit tool reads: a folder holding one of them is audited on its own. */
+export const AUDIT_LOCKFILES = [
+  "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb",
+  "Cargo.lock", "composer.lock", "go.sum", "poetry.lock", "Pipfile.lock", "uv.lock", "requirements.txt",
+];
+export const ROOT_SCAN_MAX_DEPTH = 4;
+const ROOT_SCAN_SKIP = new Set(["node_modules", "build", "dist", "target", "vendor", "Pods"]);
+
+/**
+ * Finds every project inside `rootDir`, `rootDir` included, down to ROOT_SCAN_MAX_DEPTH levels.
+ * "lockfile": folders with a lockfile, one audit each (workspace members share the root's).
+ * "manifest": folders with a manifest such as package.json, workspace members included.
+ */
+export function findProjectRoots(rootDir: string, mode: "lockfile" | "manifest"): ProjectInfo[] {
+  const roots: ProjectInfo[] = [];
+
+  const walk = (dir: string, depth: number): void => {
+    if (mode === "manifest" || AUDIT_LOCKFILES.some((f) => existsSync(join(dir, f)))) {
+      const info = getProjectInfo(dir);
+      if (info) roots.push(info);
+    }
+    if (depth >= ROOT_SCAN_MAX_DEPTH) return;
+
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".") || ROOT_SCAN_SKIP.has(entry.name)) continue;
+      walk(join(dir, entry.name), depth + 1);
+    }
+  };
+
+  const start = resolve(rootDir);
+  if (existsSync(start)) walk(start, 0);
+  return roots.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** "name (relative/path)" so that nested apps with the same package name stay distinct. */
+export function projectRootLabel(baseDir: string, info: ProjectInfo): string {
+  return `${info.name} (${relative(resolve(baseDir), info.path) || "."})`;
 }
 
 // ─── Multi-language Outdated Parsing ───────────────────────────────────
