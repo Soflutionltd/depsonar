@@ -57,6 +57,7 @@ export function formatScanSummary(
     fwVersion: string | null;
     outdatedCount: number;
     hasMajor: boolean;
+    error?: string;
   }>
 ): string {
   let totalOutdated = 0;
@@ -65,10 +66,11 @@ export function formatScanSummary(
   const rows: string[] = [];
   for (const r of results) {
     totalOutdated += r.outdatedCount;
-    if (r.outdatedCount === 0) projectsOk++;
+    if (!r.error && r.outdatedCount === 0) projectsOk++;
 
-    const status =
-      r.outdatedCount === 0
+    const status = r.error
+      ? `❌ check failed: ${r.error}`
+      : r.outdatedCount === 0
         ? "✅ up to date"
         : `⚠️ ${r.outdatedCount} outdated${r.hasMajor ? " (major)" : ""}`;
 

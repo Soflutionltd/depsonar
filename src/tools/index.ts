@@ -41,6 +41,7 @@ import {
   projectRootLabel,
   ROOT_SCAN_MAX_DEPTH,
   getOutdated,
+  checkOutdated,
   isMajorUpdate,
   computeHealthReport,
   buildUpdateCommand,
@@ -184,21 +185,28 @@ Examples:
         const info = getProjectInfo(projectPath);
         if (!info) return error(`Cannot read project at ${projectPath}`);
 
-        const outdated = getOutdated(projectPath, info);
-        const fwVer = getFrameworkVersion(info);
-        const langName = LANGUAGE_MARKERS[info.language]?.name || info.language;
+        // A repository can hold several projects (a Rust crate and its npm client, the apps of a
+        // monorepo): each folder with its own lockfile is checked, the root first.
+        const nested = findProjectRoots(projectPath, "lockfile").filter((root) => root.path !== info.path);
+        const targets = [info, ...nested];
 
-        const header = [
-          `# ${info.name}`,
-          "",
-          `**Language**: ${langName}`,
-          `**Framework**: ${info.framework}${fwVer ? ` (${fwVer})` : ""}`,
-          `**Package Manager**: ${info.packageManager}`,
-          `**Path**: \`${projectPath}\``,
-          "",
-        ].join("\n");
+        const sections = targets.map((target) => {
+          const fwVer = getFrameworkVersion(target);
+          const langName = LANGUAGE_MARKERS[target.language]?.name || target.language;
+          const header = [
+            target === info ? `# ${target.name}` : `## ${projectRootLabel(projectPath, target)}`,
+            "",
+            `**Language**: ${langName}`,
+            `**Framework**: ${target.framework}${fwVer ? ` (${fwVer})` : ""}`,
+            `**Package Manager**: ${target.packageManager}`,
+            `**Path**: \`${target.path}\``,
+            "",
+          ].join("\n");
+          const { outdated, error: checkError } = checkOutdated(target.path, target);
+          return header + (checkError ? `❌ Check failed: ${checkError}` : formatOutdated(outdated, target.language));
+        });
 
-        return text(header + formatOutdated(outdated, info.language));
+        return text(sections.join("\n\n"));
       } catch (err) {
         return error(err instanceof Error ? err.message : String(err));
       }
@@ -287,7 +295,7 @@ Examples:
         }
 
         const results = projects.map((info) => {
-          const outdated = getOutdated(info.path, info);
+          const { outdated, error: checkError } = checkOutdated(info.path, info);
           const hasMajor = Object.entries(outdated).some(([, pkg]) => isMajorUpdate(pkg.current, pkg.latest));
 
           return {
@@ -298,6 +306,7 @@ Examples:
             fwVersion: getFrameworkVersion(info),
             outdatedCount: Object.keys(outdated).length,
             hasMajor,
+            error: checkError,
           };
         });
 
@@ -338,7 +347,11 @@ Examples:
         const results: Array<{ name: string; updated: number; remaining: number; error?: string }> = [];
 
         for (const info of projects) {
-          const beforeOutdated = getOutdated(info.path, info);
+          const { outdated: beforeOutdated, error: checkError } = checkOutdated(info.path, info);
+          if (checkError) {
+            results.push({ name: info.name, updated: 0, remaining: 0, error: checkError });
+            continue;
+          }
           const beforeCount = Object.keys(beforeOutdated).length;
 
           if (beforeCount === 0) {
@@ -787,12 +800,12 @@ Examples:
         let depsSection: string | undefined;
         if (!skip_deps) {
           const scanResults = projects.map(info => {
-            const outdated = getOutdated(info.path, info);
+            const { outdated, error: checkError } = checkOutdated(info.path, info);
             const hasMajor = Object.entries(outdated).some(([, pkg]) => isMajorUpdate(pkg.current, pkg.latest));
             return {
               name: info.name, language: info.language, framework: info.framework,
               pm: info.packageManager, fwVersion: getFrameworkVersion(info),
-              outdatedCount: Object.keys(outdated).length, hasMajor,
+              outdatedCount: Object.keys(outdated).length, hasMajor, error: checkError,
             };
           });
           depsSection = formatScanSummary(scanResults);

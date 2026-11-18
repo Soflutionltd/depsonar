@@ -330,8 +330,37 @@ function getOutdatedNpm(projectPath: string, pm: PackageManager): Record<string,
       }
       return result;
     }
-    return parsed;
-  } catch { return {}; }
+    // npm leaves out "current" for a package that is not installed (no node_modules yet).
+    const result: Record<string, OutdatedPackage> = {};
+    for (const [name, item] of Object.entries(parsed as Record<string, Partial<OutdatedPackage>>)) {
+      result[name] = {
+        ...item,
+        current: item.current ?? "not installed",
+        wanted: item.wanted ?? item.latest ?? "?",
+        latest: item.latest ?? "?",
+      };
+    }
+    return result;
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`${pm} outdated failed in ${projectPath}: ${reason}`);
+  }
+}
+
+/**
+ * Outdated check for a project that is one of several being scanned: a project whose check
+ * fails is reported with its error instead of stopping the whole scan.
+ */
+export function checkOutdated(
+  projectPath: string,
+  info: ProjectInfo
+): { outdated: Record<string, OutdatedPackage>; error?: string } {
+  try {
+    return { outdated: getOutdated(projectPath, info) };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message.split("\n")[0] : String(err);
+    return { outdated: {}, error: reason };
+  }
 }
 
 function getOutdatedPip(projectPath: string): Record<string, OutdatedPackage> {
@@ -355,28 +384,50 @@ function getOutdatedPip(projectPath: string): Record<string, OutdatedPackage> {
 }
 
 function getOutdatedCargo(projectPath: string): Record<string, OutdatedPackage> {
-  if (!cmdExists("cargo")) return {};
-  // cargo outdated requires cargo-outdated plugin, fallback to cargo update --dry-run
-  try {
-    if (cmdExists("cargo-outdated")) {
-      const raw = run("cargo outdated --format json", projectPath);
-      if (!raw.trim()) return {};
-      const parsed = JSON.parse(raw);
-      const result: Record<string, OutdatedPackage> = {};
-      for (const dep of parsed.dependencies || []) {
-        if (dep.project !== dep.latest) {
-          result[dep.name] = {
-            current: dep.project,
-            wanted: dep.compat,
-            latest: dep.latest,
-          };
-        }
+  if (!cmdExists("cargo")) {
+    throw new Error("cargo is not installed: the Rust dependencies cannot be checked.");
+  }
+  if (cmdExists("cargo-outdated")) {
+    const raw = run("cargo outdated --format json", projectPath);
+    if (!raw.trim()) return {};
+    const parsed = JSON.parse(raw);
+    const result: Record<string, OutdatedPackage> = {};
+    for (const dep of parsed.dependencies || []) {
+      if (dep.project !== dep.latest) {
+        result[dep.name] = {
+          current: dep.project,
+          wanted: dep.compat,
+          latest: dep.latest,
+        };
       }
-      return result;
     }
-    // Fallback: parse Cargo.lock vs crates.io (simplified)
-    return {};
-  } catch { return {}; }
+    return result;
+  }
+  // Without the cargo-outdated plugin, cargo itself lists every compatible update and every
+  // newer incompatible version ("available"), on stderr, without touching Cargo.lock.
+  return parseCargoDryRun(run("cargo update --dry-run --verbose 2>&1", projectPath));
+}
+
+/** Parses `cargo update --dry-run --verbose`: "Updating x v1 -> v2" and "Unchanged x v1 (available: v3)". */
+export function parseCargoDryRun(output: string): Record<string, OutdatedPackage> {
+  const result: Record<string, OutdatedPackage> = {};
+  const add = (name: string, entry: OutdatedPackage) => {
+    result[result[name] ? `${name}@${entry.current}` : name] = entry;
+  };
+  for (const line of output.split("\n")) {
+    const updating = line.match(/^\s*Updating (\S+) v(\S+) -> v(\S+)(?: \(available: v([^)\s]+)\))?/);
+    if (updating) {
+      const [, name, current, wanted, latest] = updating;
+      add(name, { current, wanted, latest: latest ?? wanted });
+      continue;
+    }
+    const unchanged = line.match(/^\s*Unchanged (\S+) v(\S+) \(available: v([^)\s]+)\)/);
+    if (unchanged) {
+      const [, name, current, latest] = unchanged;
+      add(name, { current, wanted: current, latest });
+    }
+  }
+  return result;
 }
 
 function getOutdatedGo(projectPath: string): Record<string, OutdatedPackage> {
