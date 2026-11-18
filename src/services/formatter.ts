@@ -386,6 +386,16 @@ function truncate(text: string): string {
 
 export function formatCve(results: CveCheckResult[], dbStats?: { total: number; packages: string[]; lastUpdate: string }): string {
   const allAffected = results.flatMap(r => r.affected);
+  const dbAgeDays = dbStats ? (Date.now() - Date.parse(dbStats.lastUpdate)) / 86_400_000 : NaN;
+
+  if (allAffected.length === 0 && dbStats && !(dbAgeDays <= 30)) {
+    return [
+      "# CVE Check ⚠️ outdated database\n",
+      `None of the ${dbStats.total} advisories of the built-in database affects your packages, but this database was last updated on ${dbStats.lastUpdate}: advisories published since then are not checked.`,
+      "",
+      "> Run `depsonar_live_cve` (osv.dev, every package, always current) or `depsonar_audit` before relying on this result.",
+    ].join("\n");
+  }
 
   if (allAffected.length === 0) {
     const lines = ["# CVE Check ✅\n", "No known CVE advisories affect your installed packages."];
