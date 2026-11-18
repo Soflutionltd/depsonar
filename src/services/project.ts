@@ -610,9 +610,12 @@ export function groupByEcosystem(
 }
 
 export function isMajorUpdate(current: string, latest: string): boolean {
-  const curMajor = current.replace(/^[^0-9]*/, "").split(".")[0];
-  const latMajor = latest.replace(/^[^0-9]*/, "").split(".")[0];
-  return curMajor !== latMajor && curMajor !== "" && latMajor !== "";
+  const [curMajor, curMinor] = current.replace(/^[^0-9]*/, "").split(".");
+  const [latMajor, latMinor] = latest.replace(/^[^0-9]*/, "").split(".");
+  if (curMajor === "" || latMajor === "") return false;
+  // Semver: below 1.0.0 the minor number is the breaking one (0.12 -> 0.13 is a major update).
+  if (curMajor === "0" && latMajor === "0") return curMinor !== latMinor;
+  return curMajor !== latMajor;
 }
 
 export function getFrameworkVersion(info: ProjectInfo): string | null {
