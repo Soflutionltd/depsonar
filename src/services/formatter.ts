@@ -634,7 +634,7 @@ export function formatInfraReport(sections: {
 export function formatLiveCve(results: Array<{
   project: string;
   vulnerabilities: Array<{
-    id: string; summary: string; severity: string;
+    id: string; summary: string; severity: string; kind: string;
     package: string; fixedVersion: string | null; url: string;
   }>;
   packagesQueried: number;
@@ -645,13 +645,19 @@ export function formatLiveCve(results: Array<{
 
   const lines = ["# 🛡️ Live CVE Scan (osv.dev)\n"];
   let totalVulns = 0;
+  let totalWarnings = 0;
 
   for (const result of results) {
     lines.push(`## ${result.project} (${result.packagesQueried} packages scanned)\n`);
     for (const vuln of result.vulnerabilities) {
-      totalVulns++;
-      const emoji = vuln.severity === "critical" ? "🔴" : vuln.severity === "high" ? "🟠" : "🟡";
-      lines.push(`- ${emoji} **${vuln.id}** \`${vuln.package}\` (${vuln.severity})`);
+      if (vuln.kind === "vulnerability") {
+        totalVulns++;
+        const emoji = vuln.severity === "critical" ? "🔴" : vuln.severity === "high" ? "🟠" : "🟡";
+        lines.push(`- ${emoji} **${vuln.id}** \`${vuln.package}\` (${vuln.severity})`);
+      } else {
+        totalWarnings++;
+        lines.push(`- ⚪ **${vuln.id}** \`${vuln.package}\` (warning: ${vuln.kind}, not a vulnerability)`);
+      }
       lines.push(`  ${vuln.summary}`);
       if (vuln.fixedVersion) lines.push(`  Fix: upgrade to \`${vuln.fixedVersion}\``);
       lines.push(`  ${vuln.url}`);
@@ -659,7 +665,8 @@ export function formatLiveCve(results: Array<{
     lines.push("");
   }
 
-  lines.unshift(`Found **${totalVulns}** vulnerabilities across ${results.length} project(s).\n`);
+  const warnings = totalWarnings > 0 ? ` and **${totalWarnings}** warning(s) (unmaintained or unsound crates)` : "";
+  lines.unshift(`Found **${totalVulns}** vulnerabilities${warnings} across ${results.length} project(s).\n`);
   return truncate(lines.join("\n"));
 }
 

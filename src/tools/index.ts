@@ -86,7 +86,7 @@ import { checkAllProjectCves, getCveDatabaseStats, getCveDatabase } from "../ser
 import { checkDeprecated, checkAllDeprecated } from "../services/deprecated.js";
 import { scanProjectSecrets, scanAllProjectSecrets } from "../services/secrets.js";
 import { checkProjectLicenses, checkAllProjectLicenses } from "../services/licenses.js";
-import { liveAuditProject, liveAuditAllProjects } from "../services/osv.js";
+import { liveAuditAllProjects } from "../services/osv.js";
 import { getProjectChangelog } from "../services/changelog.js";
 import { detectMigration, detectAllMigrations } from "../services/migrate.js";
 import { fetchLibraryDocs, searchPackage } from "../services/docs.js";
@@ -1007,8 +1007,13 @@ Examples:
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
           if (!info) return error(`Cannot read project at ${projectPath}`);
-          const result = await liveAuditProject(projectPath, info.name, info.language);
-          return text(formatLiveCve(result.vulnerabilities.length > 0 ? [result] : []));
+          // Every folder with its own lockfile (an npm client next to a Rust crate, monorepo apps).
+          const nested = findProjectRoots(projectPath, "lockfile").filter((root) => root.path !== info.path);
+          const results = await liveAuditAllProjects([
+            { name: info.name, path: info.path, language: info.language },
+            ...nested.map((root) => ({ name: projectRootLabel(projectPath, root), path: root.path, language: root.language })),
+          ]);
+          return text(formatLiveCve(results));
         }
 
         const projects = discoverProjects(directory);
