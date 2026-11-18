@@ -1,5 +1,5 @@
 export const SERVER_NAME = "depsonar";
-export const SERVER_VERSION = "4.0.2";
+export const SERVER_VERSION = "4.1.0";
 
 export const CHARACTER_LIMIT = 25_000;
 export const COMMAND_TIMEOUT = 120_000;
