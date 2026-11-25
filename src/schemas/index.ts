@@ -3,7 +3,7 @@ import { z } from "zod";
 // An argument a tool does not declare is refused, never silently dropped: a misspelled
 // `project` (`path`, `dir`) used to fall back to scanning every project.
 function strictInput<Shape extends z.ZodRawShape>(shape: Shape) {
-  return z.object(shape).strict();
+  return z.strictObject(shape);
 }
 
 const ALL_PROJECTS_HINT =
