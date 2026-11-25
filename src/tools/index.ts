@@ -557,7 +557,9 @@ CRITICAL: Run this after any CVE announcement (e.g. Svelte CVE-2026-22775, deval
 Examples:
   - "Audit all my projects for vulnerabilities"
   - "Security scan JobPin"
-  - "Any CVEs in my SvelteKit projects?"`,
+  - "Any CVEs in my SvelteKit projects?"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: AuditSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -653,7 +655,9 @@ Examples:
 
 Examples:
   - "Check my Docker images"
-  - "Any EOL images in my projects?"`,
+  - "Any EOL images in my projects?"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: DockerSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -687,7 +691,9 @@ Examples:
 
 Examples:
   - "Check my GitHub Actions versions"
-  - "Any deprecated actions in my workflows?"`,
+  - "Any deprecated actions in my workflows?"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: ActionsSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -722,7 +728,9 @@ Examples:
 Examples:
   - "Check my project environments"
   - "Any env issues in JobPin?"
-  - "Validate all project configs"`,
+  - "Validate all project configs"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: EnvCheckSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -856,7 +864,9 @@ CRITICAL after any CVE announcement. Run immediately when new CVEs are published
 Examples:
   - "Check my projects for known CVEs"
   - "Any Svelte CVEs affecting my code?"
-  - "Show CVE database"`,
+  - "Show CVE database"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: CveSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -900,7 +910,9 @@ Examples:
 Examples:
   - "Any deprecated packages in my projects?"
   - "Check JobPin for deprecated deps"
-  - "Find packages that should be replaced"`,
+  - "Find packages that should be replaced"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: DeprecatedSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -938,7 +950,9 @@ Also checks that .env files are properly gitignored.
 Examples:
   - "Scan my projects for exposed secrets"
   - "Any leaked API keys in JobPin?"
-  - "Secret scan all projects"`,
+  - "Secret scan all projects"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: SecretsSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -976,7 +990,9 @@ Important for SaaS products to avoid legal issues.
 Examples:
   - "Check license compliance for RoomPilot"
   - "Any GPL dependencies in my projects?"
-  - "License audit all projects"`,
+  - "License audit all projects"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: LicensesSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -1014,7 +1030,9 @@ Unlike depsonar_audit (which uses local tools like npm audit), this queries the 
 Examples:
   - "Live CVE scan all my projects"
   - "Check RoomPilot for vulnerabilities with osv.dev"
-  - "Real-time security scan"`,
+  - "Real-time security scan"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: LiveCveSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
@@ -1089,7 +1107,9 @@ Finds exact file locations of code that needs to change, with migration instruct
 Examples:
   - "Check if my projects need Svelte 5 migration"
   - "Migration scan for all projects"
-  - "What Svelte 4 patterns are still in my code?"`,
+  - "What Svelte 4 patterns are still in my code?"
+
+Scope (one is required): "project" for one project, "directory" for a folder, "all": true for every project.`,
       inputSchema: MigrateSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
