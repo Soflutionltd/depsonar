@@ -101,6 +101,15 @@ function error(message: string) {
   return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
 }
 
+// A call that names nothing must not start a scan of every project: that takes minutes
+// and answers a question nobody asked.
+function assertScope(scope: { project?: string; directory?: string; all?: boolean }): void {
+  if (scope.project || scope.directory || scope.all) return;
+  throw new Error(
+    "No scope given. Pass `project` (name or absolute path) for one project, `directory` for a folder, or `all: true` to cover every project in the projects directory."
+  );
+}
+
 function resolveProject(project: string): string {
   if (existsSync(project) && (existsSync(join(project, "package.json")) ||
       existsSync(join(project, "Cargo.toml")) ||
@@ -552,8 +561,9 @@ Examples:
       inputSchema: AuditSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         const baseDir = project ? resolveProject(project) : directory || getProjectsDir();
         const roots = findProjectRoots(baseDir, "lockfile");
         if (roots.length === 0) {
@@ -647,8 +657,9 @@ Examples:
       inputSchema: DockerSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -680,8 +691,9 @@ Examples:
       inputSchema: ActionsSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -714,8 +726,9 @@ Examples:
       inputSchema: EnvCheckSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -847,7 +860,7 @@ Examples:
       inputSchema: CveSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory, show_db }) => {
+    async ({ project, directory, all, show_db }) => {
       try {
         const dbStats = getCveDatabaseStats();
 
@@ -862,6 +875,7 @@ Examples:
           return text(lines.join("\n"));
         }
 
+        assertScope({ project, directory, all });
         const baseDir = project ? resolveProject(project) : directory || getProjectsDir();
         const roots = findProjectRoots(baseDir, "manifest");
         if (roots.length === 0) {
@@ -890,8 +904,9 @@ Examples:
       inputSchema: DeprecatedSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -927,8 +942,9 @@ Examples:
       inputSchema: SecretsSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -964,8 +980,9 @@ Examples:
       inputSchema: LicensesSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -1001,8 +1018,9 @@ Examples:
       inputSchema: LiveCveSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
@@ -1075,8 +1093,9 @@ Examples:
       inputSchema: MigrateSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ project, directory }) => {
+    async ({ project, directory, all }) => {
       try {
+        assertScope({ project, directory, all });
         if (project) {
           const projectPath = resolveProject(project);
           const info = getProjectInfo(projectPath);
