@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
+import { SERVER_INSTRUCTIONS, SERVER_NAME, SERVER_VERSION } from "./constants.js";
 
 const args = process.argv.slice(2);
 
@@ -100,10 +100,10 @@ Frameworks: SvelteKit, React, Next.js, Solid.js, Vue/Nuxt, Astro, Django, Larave
   const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
   const { registerTools } = await import("./tools/index.js");
 
-  const server = new McpServer({
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-  });
+  const server = new McpServer(
+    { name: SERVER_NAME, version: SERVER_VERSION },
+    { instructions: SERVER_INSTRUCTIONS },
+  );
 
   registerTools(server);
 

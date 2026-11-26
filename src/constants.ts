@@ -1,6 +1,19 @@
 export const SERVER_NAME = "depsonar";
 export const SERVER_VERSION = "4.1.0";
 
+/**
+ * Sent to every MCP client in the initialize result, so any agent knows how to use the server
+ * without extra setup.
+ */
+export const SERVER_INSTRUCTIONS = [
+  "depsonar audits and updates the dependencies of local code projects (Node, Python, Rust, Go, PHP, Ruby, Dart, Swift, Kotlin): outdated packages, CVEs, deprecated packages, secrets, licenses, runtimes, Docker images, GitHub Actions. It does not build, deploy or publish anything.",
+  "Start with depsonar_alerts (instant, reads the last background scan), then depsonar_check on the project, then depsonar_audit or depsonar_live_cve, depsonar_secrets and depsonar_licenses. Before a major update, read depsonar_changelog and depsonar_migrate.",
+  "Most scan tools require a scope: ask the user which project (name or absolute path) unless the current folder makes it obvious; use all: true only when they ask for every project. depsonar_scan lists the projects.",
+  "depsonar_update writes to the project as soon as it is called (dry_run defaults to false): call it with dry_run: true first, show the preview, and apply only after the user agrees. depsonar_update_all defaults to a preview: never set dry_run: false without the user's go-ahead. Ask before depsonar_install with clean: true (it deletes node_modules or vendor) and before changing depsonar_setup_checker or depsonar_config.",
+  "depsonar_secrets returns masked previews: never try to print a full secret value, report the file and line instead.",
+  "A failed call returns isError with a message starting with \"Error:\": quote it, fix the argument it names (scope, project name), and do not retry the same call unchanged.",
+].join("\n");
+
 export const CHARACTER_LIMIT = 25_000;
 export const COMMAND_TIMEOUT = 120_000;
 
